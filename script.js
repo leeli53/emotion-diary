@@ -749,9 +749,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('pointercancel', () => isPointerDown = false);
 
   function createAtmosphere(x, y, isDragging) {
-    // 点击时爆出较多（12-18个），拖动时爆出较少（2-4个，形成紧凑轨迹）
-    const baseCount = isDragging ? 2 : 12;
-    const randomCount = isDragging ? 3 : 6;
+    // 点击时爆出适中（8-11个），拖动时爆出更少（1-2个，形成紧凑轨迹）
+    const baseCount = isDragging ? 1 : 8;
+    const randomCount = isDragging ? 2 : 4;
     const particleCount = baseCount + Math.floor(Math.random() * randomCount);
     
     // 点击时的颜色：当前心情的强调色
@@ -836,18 +836,18 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ══════════════════════════════════════════════════════
      BACKGROUND PATTERN (静止背景印花 - 均匀散布不重叠)
   ══════════════════════════════════════════════════════ */
-  function createRandomPattern(container, width, height, countLimit = 80, isCard = false) {
+  function createRandomPattern(container, width, height, countLimit = 40, isCard = false) {
     container.innerHTML = '';
     const availableImgs = Object.values(MOODS).map(m => m.img).filter(Boolean);
     if (availableImgs.length === 0) return;
 
-    // 密度计算：基数减半，数量翻倍！
+    // 密度计算：整体更克制，避免视觉噪音与性能开销
     const area = width * height;
-    const density = isCard ? 50000 : 30000;
+    const density = isCard ? 160000 : 95000;
     const targetCount = Math.min(Math.floor(area / density) || 1, countLimit);
 
     const placed = []; // 用于记录已放置印花的坐标和半径 {x, y, r}
-    const padding = isCard ? 15 : 25; // 印花之间的最小安全间距
+    const padding = isCard ? 24 : 34; // 印花之间的最小安全间距
 
     for (let i = 0; i < targetCount; i++) {
       const baseSize = isCard ? 30 : 40;
@@ -915,7 +915,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bgContainer) {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      createRandomPattern(bgContainer, w, h, 80, false);
+      createRandomPattern(bgContainer, w, h, 36, false);
     }
 
     // 2. 卡片内部印花
@@ -932,7 +932,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const h = rect.height || 200;
       
       // 给个保底的面积算个数 (保证至少会有 2 个左右)
-      createRandomPattern(cardPattern, w, h, 10, true); 
+      createRandomPattern(cardPattern, w, h, 8, true); 
     });
   }
 
