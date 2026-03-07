@@ -2,6 +2,7 @@
 
 这是我用 `HTML + CSS + JavaScript` 做的一个非常基础的小项目。  
 定位就是：`小白练手`、`先跑起来`、`能用就行`。
+
 <img width="1620" height="900" alt="homepage-preview" src="https://github.com/user-attachments/assets/db0369e6-571a-4d7d-9e5e-18553d8db00d" />
 
 首页长这样：一个轻量、直观、没有复杂操作的情绪记录页。
