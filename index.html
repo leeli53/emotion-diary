@@ -2653,6 +2653,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 初始化加载时渲染所有页面数据
   renderAll();
 
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
+  const shouldRunDecorativeEffects = !prefersReducedMotion && hasFinePointer;
+
+  if (shouldRunDecorativeEffects) {
   /* ══════════════════════════════════════════════════════
      CLICK ATMOSPHERE (氛围感彩条)
   ══════════════════════════════════════════════════════ */
@@ -2895,8 +2900,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('mousemove', (ev) => {
     mouseX = ev.clientX;
     mouseY = ev.clientY;
+
+    if (isIdle) {
+      follower.getAnimations().forEach(anim => anim.cancel());
+    }
+
     isUserActive = true;
     isIdle = false;
+    if (idleAnimTimer) {
+      clearTimeout(idleAnimTimer);
+      idleAnimTimer = null;
+    }
     
     // 重置空闲计时器
     clearTimeout(idleTimer);
@@ -2920,7 +2934,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (idleAnimTimer) return;
     
     const idleAnimate = () => {
-      if (!isIdle || !isUserActive) {
+      if (!isIdle || isUserActive) {
         idleAnimTimer = null;
         return;
       }
@@ -2970,6 +2984,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { once: true });
   
   animateFollower();
+  }
 
 })();
 </script>
