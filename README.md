@@ -4,13 +4,12 @@
 定位就是：`小白练手`、`先跑起来`、`能用就行`。
 <img width="1620" height="900" alt="homepage-preview" src="https://github.com/user-attachments/assets/db0369e6-571a-4d7d-9e5e-18553d8db00d" />
 
-
 首页长这样：一个轻量、直观、没有复杂操作的情绪记录页。
 
 ## 先说清楚
 
 - 这是一次个人 `vibecoding` 尝试，不是专业级产品，主要使用工具是Codex，模型是GPT5.3
-- 代码主要放在一个 `index.html` 里，结构比较直接
+- 代码已拆分为 `index.html` + `styles.css` + `script.js`，结构直观好理解
 - 功能不复杂，重点是把完整流程走通（记录 -> 查看 -> 备份）
 
 ## 这个小东西能做什么
@@ -64,7 +63,9 @@ http://localhost:8080
 ```text
 emotion-diary/
 ├── assets/      # 情绪图片
-├── index.html   # 主页面（样式和脚本都在这里）
+├── index.html   # 页面结构
+├── styles.css   # 页面样式
+├── script.js    # 页面交互逻辑
 └── README.md
 ```
 
@@ -88,4 +89,4 @@ emotion-diary/
 - 多加几种情绪
 - 给每条日记加标签
 - 调整页面配色和排版
-- 把单文件拆成多个文件（HTML/CSS/JS）
+- 继续把 JavaScript 按功能拆成更多模块
