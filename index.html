@@ -2005,6 +2005,60 @@ function applyMood(mood) {
 const esc = s => String(s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+function isValidDateKey(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+}
+
+function toDisplayDateFromDateKey(dk) {
+  const [y, m, d] = dk.split('-').map(Number);
+  const dt = new Date(y, m - 1, d, 12, 0, 0);
+  return dt.toLocaleDateString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function normalizeImportedEntries(rawList) {
+  if (!Array.isArray(rawList)) throw new Error('导入文件格式错误：根节点必须是数组');
+  const usedIds = new Set();
+  const normalized = [];
+
+  rawList.forEach((item, idx) => {
+    if (!item || typeof item !== 'object') return;
+    const mood = typeof item.mood === 'string' && MOODS[item.mood] ? item.mood : null;
+    if (!mood) return;
+
+    const dk = isValidDateKey(item.dk) ? item.dk : null;
+    if (!dk) return;
+
+    const text = typeof item.text === 'string' ? item.text : '';
+    let id = Number(item.id);
+    if (!Number.isFinite(id)) id = Date.now() + idx;
+    while (usedIds.has(id)) id += 1;
+    usedIds.add(id);
+
+    const ds = typeof item.ds === 'string' && item.ds.trim()
+      ? item.ds.trim()
+      : toDisplayDateFromDateKey(dk);
+
+    normalized.push({ id, mood, text, dk, ds });
+  });
+
+  if (!normalized.length) throw new Error('导入失败：没有可用的有效记录');
+
+  normalized.sort((a, b) => {
+    if (a.dk === b.dk) return b.id - a.id;
+    return a.dk > b.dk ? -1 : 1;
+  });
+
+  return { items: normalized, dropped: rawList.length - normalized.length };
+}
+
 /* ─── Entry icon background ─── */
 function entryBg(mood) {
   const c = MOODS[mood]?.color || '#888';
@@ -2576,10 +2630,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const fr = new FileReader();
     fr.onload = () => {
       try {
-        const p = JSON.parse(fr.result);
-        if (!Array.isArray(p)) throw new Error('格式错误');
-        entries = p; save(); renderAll();
-        toast(`导入成功，共 ${p.length} 条`);
+        const parsed = JSON.parse(fr.result);
+        const { items, dropped } = normalizeImportedEntries(parsed);
+        entries = items;
+        save();
+        renderAll();
+        toast(dropped > 0
+          ? `导入成功：${items.length} 条（已过滤 ${dropped} 条无效记录）`
+          : `导入成功，共 ${items.length} 条`);
       } catch(err) { toast('导入失败：'+err.message); }
       iFile.value='';
     };
