@@ -7,6 +7,14 @@
 
 首页长这样：一个轻量、直观、没有复杂操作的情绪记录页。
 
+## Wiki 文档入口
+
+- Wiki 首页：https://github.com/leeli53/emotion-diary/wiki
+- 快速开始：https://github.com/leeli53/emotion-diary/wiki/Quick-Start
+- 功能说明：https://github.com/leeli53/emotion-diary/wiki/Features
+- 数据结构与导入导出：https://github.com/leeli53/emotion-diary/wiki/Data-Model-and-Import-Export
+- 常见问题 FAQ：https://github.com/leeli53/emotion-diary/wiki/FAQ
+
 ## 先说清楚
 
 - 这是一次个人 `vibecoding` 尝试，不是专业级产品，主要使用工具是Codex，模型是GPT5.3
