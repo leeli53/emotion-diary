@@ -1962,7 +1962,9 @@ const load = () => {
 const save = () => localStorage.setItem(STORE_KEY, JSON.stringify(entries));
 
 /* ─── Date helpers ─── */
-const dateKey  = d => d.toISOString().slice(0,10);
+const pad2 = n => String(n).padStart(2, '0');
+const dateKey = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const monthKey = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
 const today    = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
 
 function calcStreak() {
@@ -2082,7 +2084,7 @@ function renderStats() {
   const s = calcStreak();
   document.getElementById('s-total').textContent  = entries.length;
   document.getElementById('s-streak').textContent = s;
-  const mo = new Date().toISOString().slice(0,7);
+  const mo = monthKey(new Date());
   document.getElementById('s-month').textContent  =
     entries.filter(e => e.dk?.startsWith(mo)).length;
 
@@ -2366,7 +2368,7 @@ function renderTimeline() {
 }
 
 function renderSettings() {
-  const mo = new Date().toISOString().slice(0,7);
+  const mo = monthKey(new Date());
   document.getElementById('p-total').textContent  = entries.length;
   document.getElementById('p-month').textContent  =
     entries.filter(e=>e.dk?.startsWith(mo)).length;
