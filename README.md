@@ -12,6 +12,7 @@
 - Wiki 首页：https://github.com/leeli53/emotion-diary/wiki
 - 快速开始：https://github.com/leeli53/emotion-diary/wiki/Quick-Start
 - 功能说明：https://github.com/leeli53/emotion-diary/wiki/Features
+- v0.2 交付说明：https://github.com/leeli53/emotion-diary/wiki/v0.2-Delivery-Notes
 - 数据结构与导入导出：https://github.com/leeli53/emotion-diary/wiki/Data-Model-and-Import-Export
 - 常见问题 FAQ：https://github.com/leeli53/emotion-diary/wiki/FAQ
 
@@ -25,9 +26,18 @@
 
 - 选一个当天情绪（开心、平静、难过、焦虑、生气、疲惫）并且页面根据选择不同的心情有不同的颜色变化
 - 写一段当天感受并保存
-- 在时间轴看历史记录
-- 在统计页看简单趋势
+- 在时间轴按心情、关键词、日期范围组合筛选历史记录
+- 点击任意历史记录，弹窗内直接编辑并保存
+- 在统计页查看近 7 天趋势、心情分布、热力图和“本周总结”
 - 导出/导入 JSON 备份数据
+
+## v0.2 演示路径（建议 3 分钟）
+
+1. 在首页选择任意心情并保存 2-3 条记录。
+2. 进入“时间轴”，用“心情 + 关键词 + 日期范围”组合筛选。
+3. 点击某条记录，在详情弹窗里修改文字或心情并保存。
+4. 进入“统计”，查看“本周总结”是否与筛选前记录一致。
+5. 到“设置”页导出 JSON，再导入验证数据一致。
 
 ## 技术栈（很朴素）
 
@@ -103,6 +113,14 @@ emotion-diary/
 ## 更新日志
 
 > 详细版本记录文件：`CHANGELOG.md`
+
+### 2026-03-08
+
+#### v0.2（作品集展示向升级）
+- 新增时间轴组合筛选：支持按心情、关键词、日期范围过滤。
+- 新增记录详情编辑：弹窗支持编辑心情与文本并保存。
+- 新增统计“本周总结”卡片：自动汇总记录数、活跃天、主情绪与上周对比。
+- 完成视觉统一优化：筛选区、时间轴条目、统计叙事卡片与弹窗交互风格一致化。
 
 ### 2026-03-07
 

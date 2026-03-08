@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "workspace": {
+    "name": "情绪日记",
+    "createdAt": 1772976768714,
+    "preset": "starter"
+  },
+  "authorizedRoots": [
+    "/Users/lee/Desktop/情绪日记"
+  ]
+}

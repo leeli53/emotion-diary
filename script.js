@@ -15,6 +15,18 @@ const MOODS = {
 /* ─── State ─── */
 let entries    = [];
 let activeMood = null;
+const timelineFilters = {
+  mood: '',
+  keyword: '',
+  start: '',
+  end: '',
+};
+const detailState = {
+  id: null,
+  isEditing: false,
+  scrollLocked: false,
+  scrollY: 0,
+};
 
 /* ─── Storage ─── */
 const load = () => {
@@ -136,9 +148,10 @@ function entryHTML(e) {
     ? `<img src="${m.img}" alt="${m.label}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:2px;">`
     : '';
   return `
-  <div class="entry" data-id="${e.id}">
+  <div class="entry" data-id="${e.id}" style="--entry-accent:${m.color || '#888'};">
     <div class="entry-meta">
       <span class="entry-date">${moodIcon} ${dateStr}</span>
+      <span class="entry-mood-tag">${m.label || '未知'}</span>
     </div>
     <div class="entry-text">${esc(e.text||'（空）')}</div>
     <button class="entry-del" data-id="${e.id}" aria-label="删除">×</button>
@@ -156,6 +169,9 @@ function del(id) {
 function openDetail(id) {
   const e = entries.find(e => e.id === id);
   if (!e) return;
+  lockPageScroll();
+  detailState.id = id;
+  detailState.isEditing = false;
   const m = MOODS[e.mood] || {};
   const emojiEl = document.getElementById('d-emoji');
   if (m.img) {
@@ -166,7 +182,112 @@ function openDetail(id) {
   document.getElementById('d-mood').textContent  = m.label||'';
   document.getElementById('d-date').textContent  = e.ds;
   document.getElementById('d-text').textContent  = e.text||'（空）';
+  document.getElementById('d-edit-mood').value = e.mood;
+  document.getElementById('d-edit-text').value = e.text || '';
+  setDetailEditMode(false);
   document.getElementById('detail-overlay').classList.add('open');
+}
+
+function setDetailEditMode(isEditing) {
+  detailState.isEditing = isEditing;
+  document.getElementById('detail-view').hidden = isEditing;
+  document.getElementById('detail-edit').hidden = !isEditing;
+  document.getElementById('detail-edit-btn').hidden = isEditing;
+  document.getElementById('detail-cancel-btn').hidden = !isEditing;
+  document.getElementById('detail-save-btn').hidden = !isEditing;
+}
+
+function closeDetail() {
+  unlockPageScroll();
+  detailState.id = null;
+  detailState.isEditing = false;
+  document.getElementById('detail-overlay').classList.remove('open');
+  setDetailEditMode(false);
+}
+
+function lockPageScroll() {
+  if (detailState.scrollLocked) return;
+  detailState.scrollY = window.scrollY || window.pageYOffset || 0;
+  document.body.classList.add('modal-open');
+  document.body.style.top = `-${detailState.scrollY}px`;
+  detailState.scrollLocked = true;
+}
+
+function unlockPageScroll() {
+  if (!detailState.scrollLocked) return;
+  document.body.classList.remove('modal-open');
+  document.body.style.top = '';
+  window.scrollTo(0, detailState.scrollY || 0);
+  detailState.scrollLocked = false;
+}
+
+function saveDetailEdit() {
+  if (detailState.id == null) return;
+  const idx = entries.findIndex(e => e.id === detailState.id);
+  if (idx < 0) {
+    toast('记录不存在或已被删除');
+    closeDetail();
+    return;
+  }
+  const mood = document.getElementById('d-edit-mood').value;
+  const text = document.getElementById('d-edit-text').value.trim();
+  if (!MOODS[mood]) {
+    toast('请选择有效心情');
+    return;
+  }
+  if (!text) {
+    toast('内容不能为空');
+    return;
+  }
+  entries[idx] = {
+    ...entries[idx],
+    mood,
+    text,
+  };
+  save();
+  renderAll();
+  openDetail(detailState.id);
+  toast('已保存修改');
+}
+
+function getWeekBounds(baseDate = new Date()) {
+  const todayDate = new Date(baseDate);
+  todayDate.setHours(0, 0, 0, 0);
+  const day = todayDate.getDay();
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  const start = new Date(todayDate);
+  start.setDate(todayDate.getDate() - diffToMonday);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { start, end };
+}
+
+function formatDateRange(start, end) {
+  const pad = n => String(n).padStart(2, '0');
+  const l = `${pad(start.getMonth() + 1)}.${pad(start.getDate())}`;
+  const r = `${pad(end.getMonth() + 1)}.${pad(end.getDate())}`;
+  return `${l} - ${r}`;
+}
+
+function getFilteredTimelineEntries() {
+  const mood = timelineFilters.mood;
+  const keyword = timelineFilters.keyword.trim().toLowerCase();
+  let start = timelineFilters.start || '';
+  let end = timelineFilters.end || '';
+  if (start && end && start > end) {
+    const tmp = start;
+    start = end;
+    end = tmp;
+    timelineFilters.start = start;
+    timelineFilters.end = end;
+  }
+  return entries.filter(e => {
+    if (mood && e.mood !== mood) return false;
+    if (keyword && !String(e.text || '').toLowerCase().includes(keyword)) return false;
+    if (start && e.dk < start) return false;
+    if (end && e.dk > end) return false;
+    return true;
+  });
 }
 
 /* ─── Attach feed events (open detail / delete) ─── */
@@ -216,6 +337,42 @@ function renderStats() {
     if (!dayMoodMap[e.dk]) dayMoodMap[e.dk] = e.mood;
     if (!dayEntryMap[e.dk]) dayEntryMap[e.dk] = e.id;
   });
+
+  const currentWeek = getWeekBounds(new Date());
+  const previousWeekStart = new Date(currentWeek.start);
+  previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+  const previousWeekEnd = new Date(currentWeek.end);
+  previousWeekEnd.setDate(previousWeekEnd.getDate() - 7);
+  const currentStartKey = dateKey(currentWeek.start);
+  const currentEndKey = dateKey(currentWeek.end);
+  const prevStartKey = dateKey(previousWeekStart);
+  const prevEndKey = dateKey(previousWeekEnd);
+
+  const currentWeekEntries = entries.filter(e => e.dk >= currentStartKey && e.dk <= currentEndKey);
+  const previousWeekEntries = entries.filter(e => e.dk >= prevStartKey && e.dk <= prevEndKey);
+  const currentWeekDays = new Set(currentWeekEntries.map(e => e.dk)).size;
+  const currentWeekMoodCounts = {};
+  currentWeekEntries.forEach(e => {
+    currentWeekMoodCounts[e.mood] = (currentWeekMoodCounts[e.mood] || 0) + 1;
+  });
+
+  const dominantMood = Object.entries(currentWeekMoodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+  const dominantMeta = MOODS[dominantMood];
+  document.getElementById('ws-range').textContent = formatDateRange(currentWeek.start, currentWeek.end);
+  document.getElementById('ws-total').textContent = `${currentWeekEntries.length} 条`;
+  document.getElementById('ws-days').textContent = `${currentWeekDays} / 7`;
+  document.getElementById('ws-mood').innerHTML = dominantMeta
+    ? `${dominantMeta.img ? `<img src="${dominantMeta.img}" alt="${dominantMeta.label}" style="width:14px;height:14px;vertical-align:middle;object-fit:contain;margin-right:4px;">` : ''}${dominantMeta.label}`
+    : '—';
+  const delta = currentWeekEntries.length - previousWeekEntries.length;
+  document.getElementById('ws-trend').textContent = delta === 0 ? '持平' : `${delta > 0 ? '+' : ''}${delta} 条`;
+  const weekCopy = document.getElementById('ws-copy');
+  if (!currentWeekEntries.length) {
+    weekCopy.textContent = '本周还没有记录，写下第一条吧。';
+  } else {
+    const moodPart = dominantMeta ? `主情绪是“${dominantMeta.label}”` : '情绪分布较平均';
+    weekCopy.textContent = `本周已记录 ${currentWeekEntries.length} 条，活跃 ${currentWeekDays} 天，${moodPart}。`;
+  }
 
   // Distribution
   const maxC = Math.max(...Object.values(counts), 1);
@@ -317,7 +474,7 @@ function renderStats() {
       <div class="trend-main">
         <div class="trend-meta">记录数  单位: 条</div>
         <div class="trend-plot">
-          <svg class="trend-svg" viewBox="0 0 ${VIEW_W} ${VIEW_H}" preserveAspectRatio="none" aria-label="近七天记录趋势图">
+          <svg class="trend-svg" viewBox="0 0 ${VIEW_W} ${VIEW_H}" preserveAspectRatio="xMidYMid meet" aria-label="近七天记录趋势图">
             ${gridH}
             ${gridV}
             <path class="trend-area" d="${areaPath}"></path>
@@ -477,10 +634,66 @@ function renderStats() {
 }
 
 function renderTimeline() {
+  const moodSelect = document.getElementById('tl-filter-mood');
+  const keywordInput = document.getElementById('tl-filter-keyword');
+  const startInput = document.getElementById('tl-filter-start');
+  const endInput = document.getElementById('tl-filter-end');
+  if (moodSelect) moodSelect.value = timelineFilters.mood;
+  if (keywordInput) keywordInput.value = timelineFilters.keyword;
+  if (startInput) startInput.value = timelineFilters.start;
+  if (endInput) endInput.value = timelineFilters.end;
+
+  const filtered = getFilteredTimelineEntries();
   const el = document.getElementById('timeline-feed');
-  el.innerHTML = entries.length
-    ? entries.map(entryHTML).join('')
-    : '<div class="empty">还没有任何记录</div>';
+  el.innerHTML = filtered.length
+    ? filtered.map(entryHTML).join('')
+    : `<div class="empty">${
+      entries.length ? '没有匹配的记录，试试调整筛选条件' : '还没有任何记录'
+    }</div>`;
+
+  const activeFilterCount =
+    Number(Boolean(timelineFilters.mood)) +
+    Number(Boolean(timelineFilters.keyword.trim())) +
+    Number(Boolean(timelineFilters.start)) +
+    Number(Boolean(timelineFilters.end));
+  const meta = document.getElementById('tl-filter-meta');
+  if (!meta) return;
+  meta.textContent = activeFilterCount
+    ? `当前筛选后 ${filtered.length} / ${entries.length} 条记录`
+    : `显示全部 ${entries.length} 条记录`;
+}
+
+function bindTimelineFilters() {
+  const moodSelect = document.getElementById('tl-filter-mood');
+  const keywordInput = document.getElementById('tl-filter-keyword');
+  const startInput = document.getElementById('tl-filter-start');
+  const endInput = document.getElementById('tl-filter-end');
+  const resetBtn = document.getElementById('tl-filter-reset');
+  if (!moodSelect || !keywordInput || !startInput || !endInput || !resetBtn) return;
+
+  moodSelect.addEventListener('change', () => {
+    timelineFilters.mood = moodSelect.value;
+    renderTimeline();
+  });
+  keywordInput.addEventListener('input', () => {
+    timelineFilters.keyword = keywordInput.value;
+    renderTimeline();
+  });
+  startInput.addEventListener('change', () => {
+    timelineFilters.start = startInput.value;
+    renderTimeline();
+  });
+  endInput.addEventListener('change', () => {
+    timelineFilters.end = endInput.value;
+    renderTimeline();
+  });
+  resetBtn.addEventListener('click', () => {
+    timelineFilters.mood = '';
+    timelineFilters.keyword = '';
+    timelineFilters.start = '';
+    timelineFilters.end = '';
+    renderTimeline();
+  });
 }
 
 function renderSettings() {
@@ -646,13 +859,30 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Feed events */
   bindFeed('home-feed');
   bindFeed('timeline-feed');
+  bindTimelineFilters();
 
   /* Detail modal */
   const dOv = document.getElementById('detail-overlay');
   document.getElementById('detail-close').addEventListener('click', () =>
-    dOv.classList.remove('open'));
+    closeDetail());
   dOv.addEventListener('click', ev => {
-    if (ev.target===dOv) dOv.classList.remove('open');
+    if (ev.target===dOv) closeDetail();
+  });
+  document.getElementById('detail-edit-btn').addEventListener('click', () => {
+    setDetailEditMode(true);
+    const editField = document.getElementById('d-edit-text');
+    editField.focus();
+    editField.setSelectionRange(editField.value.length, editField.value.length);
+  });
+  document.getElementById('detail-cancel-btn').addEventListener('click', () => {
+    if (detailState.id != null) openDetail(detailState.id);
+  });
+  document.getElementById('detail-save-btn').addEventListener('click', saveDetailEdit);
+  document.getElementById('d-edit-text').addEventListener('keydown', ev => {
+    if ((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter') {
+      ev.preventDefault();
+      saveDetailEdit();
+    }
   });
 
   /* Help */
@@ -668,7 +898,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Keyboard */
   document.addEventListener('keydown', ev => {
     if (ev.key==='Escape') {
-      dOv.classList.remove('open');
+      closeDetail();
       hOv.classList.remove('open');
     }
   });
@@ -945,7 +1175,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ══════════════════════════════════════════════════════
-     MOUSE FOLLOWER (鼠标跟随 & 空闲随机动效)
+     MOUSE FOLLOWER (鼠标跟随)
   ══════════════════════════════════════════════════════ */
   const follower = document.createElement('div');
   follower.className = 'mouse-follower';
@@ -953,34 +1183,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let mouseX = -100, mouseY = -100;
   let followerX = -100, followerY = -100;
-  let isUserActive = false;
-  let idleTimer = null;
-  let idleAnimTimer = null;
-  let isIdle = false;
 
   // 鼠标移动时更新位置
   document.addEventListener('mousemove', (ev) => {
     mouseX = ev.clientX;
     mouseY = ev.clientY;
-
-    if (isIdle) {
-      follower.getAnimations().forEach(anim => anim.cancel());
-    }
-
-    isUserActive = true;
-    isIdle = false;
-    if (idleAnimTimer) {
-      clearTimeout(idleAnimTimer);
-      idleAnimTimer = null;
-    }
-    
-    // 重置空闲计时器
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-      isUserActive = false;
-      isIdle = true;
-      startIdleAnimation();
-    }, 3000); // 3秒无操作进入空闲模式
   });
 
   // 鼠标离开窗口时隐藏
@@ -991,41 +1198,12 @@ document.addEventListener('DOMContentLoaded', () => {
     follower.style.opacity = '1';
   });
 
-  // 空闲时的随机漂浮动画
-  function startIdleAnimation() {
-    if (idleAnimTimer) return;
-    
-    const idleAnimate = () => {
-      if (!isIdle || isUserActive) {
-        idleAnimTimer = null;
-        return;
-      }
-      
-      // 随机目标位置（屏幕内）
-      const targetX = Math.random() * (window.innerWidth - 100) + 50;
-      const targetY = Math.random() * (window.innerHeight - 100) + 50;
-      
-      // 平滑移动到目标
-      follower.animate([
-        { left: `${followerX}px`, top: `${followerY}px` },
-        { left: `${targetX}px`, top: `${targetY}px` }
-      ], {
-        duration: 2000 + Math.random() * 2000,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-        fill: 'forwards'
-      }).onfinish = () => {
-        followerX = targetX;
-        followerY = targetY;
-      };
-      
-      idleAnimTimer = setTimeout(idleAnimate, 2000 + Math.random() * 2000);
-    };
-    
-    idleAnimate();
-  }
-
   // 每一帧平滑跟随
   function animateFollower() {
+    if (mouseX === -100 || mouseY === -100) {
+      requestAnimationFrame(animateFollower);
+      return;
+    }
     // 缓动跟随 (lerp)
     const ease = 0.12;
     followerX += (mouseX - followerX) * ease;

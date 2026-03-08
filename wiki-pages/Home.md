@@ -10,6 +10,7 @@
 4. [常见问题 FAQ](FAQ)
 5. [开发备注（小白视角）](Development-Notes)
 6. [Roadmap](Roadmap)
+7. [v0.2 交付说明（Skills 驱动）](v0.2-Delivery-Notes)
 
 ## 项目定位
 
